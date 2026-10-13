@@ -1,0 +1,84 @@
+services:
+  mariadb:
+    image: mariadb:11.4
+    container_name: orchestrator-mariadb
+
+    environment:
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+
+    ports:
+      - "3306:3306"
+
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "healthcheck.sh",
+          "--connect",
+          "--innodb_initialized"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    image: migrate/migrate:v4.18.1
+    container_name: orchestrator-migrate
+
+    volumes:
+      - ./migrations:/migrations
+
+    command:
+      [
+        "-path",
+        "/migrations",
+        "-database",
+        "mysql://${DB_USER}:${DB_PASSWORD}@tcp(mariadb:3306)/${DB_NAME}",
+        "up"
+      ]
+
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+
+    container_name: orchestrator-api
+
+    env_file:
+      - .env
+
+    ports:
+      - "${HTTP_PORT}:8080"
+
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.runner
+
+    container_name: orchestrator-runner
+
+    env_file:
+      - .env
+
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  mariadb_data:
