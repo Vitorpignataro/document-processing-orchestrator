@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/Vitorpignataro/go-job-orchestrator/internal/config"
-	"github.com/Vitorpignataro/go-job-orchestrator/internal/database"
+	"github.com/Vitorpignataro/document-processing-orchestrator/internal/config"
+	"github.com/Vitorpignataro/document-processing-orchestrator/internal/database"
 )
 
 func main(){
